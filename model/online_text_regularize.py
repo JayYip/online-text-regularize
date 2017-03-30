@@ -20,8 +20,6 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
         self.eta = eta
         self.regularize_type = regularize_type
 
-        self.dimension_size = self.regularizer.shape[1]
-
         #Initialize model variables
         self.w = None
         self.omega = None
@@ -34,13 +32,15 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
 
         assert eta > 0, 'eta should be bigger than 0, %s found.' % str(eta)
 
-        assert regularize_type not in ('word', 'sentence'), 'regularize_type should be "word" or "sentence", %s found.' % regularize_type
+        assert regularize_type in ('word', 'sentence'), 'regularize_type should be "word" or "sentence", %s found.' % regularize_type
+
+        self.dimension_size = self.regularizer.shape[0]
 
     def _loss(self, y, y_predict):
         """Calculate the empirical loss"""
         return np.log(1+np.exp(- y * y_predict))
 
-    def fit(X, y):
+    def fit(self, X, y):
 
         #Check X and y have the valid shape
         X, y = check_X_y(X, y)
@@ -48,8 +48,7 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
         assert isinstance(X, np.ndarray), 'Regularizer should be a numpy ndarray, %s found.' % type(X)
         assert isinstance(y, np.ndarray), 'Regularizer should be a numpy ndarray, %s found.' % type(y)
 
-        assert X.shape[1] == self.dimension_size, //
-        'The dimension of X and regularizer not aligned. (:,%d) expected, (:,%d) found.' % (self.m, X.shape[1])
+        assert X.shape[1] == self.dimension_size, 'The dimension of X and regularizer not aligned. (:,%d) expected, (:,%d) found.' % (self.dimension_size, X.shape[1])
 
         #Initialize variables
         if not self.w:
@@ -69,7 +68,7 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
         w_half = self.w - (self.eta / self.p) * (y_predict - y) 
 
         if self.regularize_type == 'word':
-            positive_part = np.abs(a) - (self.eta / self.p) * self.regularizer
+            positive_part = np.abs(w_half) - (self.eta / self.p) * self.regularizer
             positive_part[positive_part < 0] = 0
             self.w = np.sign(w_half) * positive_part
 
@@ -79,11 +78,11 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
         self.omega = self.omega * np.exp(-self.eta * (loss + self.regularizer *  norm) / self.p)
         self.q = normalize(self.omega)
 
-        self.p = (1 - self.delta) * self.q + self.delta / m
+        self.p = (1 - self.delta) * self.q + self.delta / self.dimension_size
 
 
 
-    def predict(X):
+    def predict(self, X):
 
         #Input validation
         X = check_array(X)
