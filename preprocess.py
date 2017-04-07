@@ -18,10 +18,11 @@ from scipy.sparse import vstack
 from nltk import sent_tokenize
 import collections
 import gensim
+import numpy as np
 
 def download_data(data, data_path):
 
-    elif data == 'processed_stars.tar.gz':
+    if data == 'processed_stars.tar.gz':
         urllib.request.urlretrieve('http://www.cs.jhu.edu/~mdredze/datasets/sentiment/processed_stars.tar.gz', 
                 os.path.join(data_path, data))
 
@@ -38,9 +39,7 @@ class Stream20News(object):
 
     def get_train_cat(self, cat_name):
 
-        #cat_name = ['comp.sys.mac.hardware', 'comp.sys.ibm.pc.hardware']
-
-        train = fetch_20newsgroups('train', categories = cat_name, 
+        train = fetch_20newsgroups(subset = 'train', categories = cat_name, 
             remove=('headers', 'footers', 'quotes'), data_home = self.data_path)
         vectorizer = TfidfVectorizer()
         vectorizer.fit(train.data)
@@ -56,11 +55,17 @@ class Stream20News(object):
                 train.data[i][s] = vectorizer.transform([sent])
 
             #Broadcast target to have the same shape
-            init = np.empty(len(train.data[i]))
-            init.fill(train.target[i])
-            target_list.append(init)
+            tar = np.empty(len(train.data[i]))
+            tar.fill(train.target[i])
 
-            yield (train.data[i], target_list[i])
+            if len(train.data[i]) >  1:
+                train.data[i] = vstack(train.data[i])
+            elif len(train.data[i]) ==  1:
+                train.data[i] = train.data[i][0]
+            else:
+                continue
+
+            yield (train.data[i], tar)
             
 
 def process_stars():
@@ -87,6 +92,7 @@ def prepare_data(data_path):
             download_data(data, data_path)
             if data == 'processed_stars.tar.gz':
                 process_stars()
+
             elif data == 'sle_movieReviews.tar.gz':
                 process_movie()
 

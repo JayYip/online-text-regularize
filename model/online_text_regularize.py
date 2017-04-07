@@ -6,6 +6,7 @@ from sklearn.utils.estimator_checks import check_estimator
 from sklearn.utils.validation import check_X_y, check_array
 from sklearn.preprocessing import normalize
 import numpy as np
+import scipy as sp
 
 class OnlineTextReg(BaseEstimator, ClassifierMixin):
     """
@@ -16,18 +17,18 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
         delta: Smoothing parameter. [0,1]
         eta: Step size
     """
-    def __init__(self, regularizer, delta, eta, regularize_type = 'word'):
+    def __init__(self, regularizer, delta, eta, regularize_type):
         super(OnlineTextReg, self).__init__()
         self.regularizer = regularizer
         self.delta = delta
         self.eta = eta
         self.regularize_type = regularize_type
 
+        self.regularizer_size = self.regularizer.shape[0]
+
         #Initialize model variables
-        self.w = None
-        self.omega = None
-        self.p = None
-        self.q = None
+        self.trained = False
+        self.trained_count = 0
 
         assert isinstance(regularizer, np.ndarray), 'Regularizer should be a numpy ndarray, %s found.' % type(regularizer)
 
@@ -35,20 +36,15 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
 
         assert eta > 0, 'eta should be bigger than 0, %s found.' % str(eta)
 
-        #assert regularize_type in ('word', 'sentence'), 'regularize_type should be "word" or "sentence", %s found.' % regularize_type
-
-        #Embedding size
-        self.dimension_size = self.regularizer.shape[0]
-
     def _loss(self, y, y_predict):
         """Calculate the empirical loss"""
         return np.log(1+np.exp(- y * y_predict))
 
-    def _word_reg_update(self, X, w_half, p, regularizer):
+    def _word_reg_update(self, w_half, p, regularizer):
 
         positive_part = np.abs(w_half) - (self.eta / p) * regularizer
         positive_part[positive_part < 0] = 0
-        return np.sign(w_half) * positive_part
+        return np.multiply(np.sign(w_half), positive_part)
 
     def _sentence_reg_update(self, X, w, w_half, p, regularizer):
         
@@ -77,54 +73,64 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
             y: Scaler. 
         """
 
-        assert isinstance(X, np.ndarray), 'Regularizer should be a numpy ndarray, %s found.' % type(X)
-        #assert isinstance(y, np.ndarray), 'Regularizer should be a numpy ndarray, %s found.' % type(y)
+        self.trained_count += 1
 
-        assert X.shape[1] == self.dimension_size, 'The dimension of X and regularizer not aligned. (:,%d) expected, (:,%d) found.' % (self.dimension_size, X.shape[1])
+        if not self.trained:
+            self.w = np.zeros(shape = [X.shape[1], self.regularizer_size])
+            self.omega = np.ones(self.regularizer_size)
+            self.p = np.ones(self.regularizer_size) / self.regularizer_size
+            self.q = np.ones(self.regularizer_size) / self.regularizer_size
 
-        #Initialize variables
-        if not self.w:
-            self.w = np.zeros(self.regularizer)
-            self.omega = np.ones(self.regularizer)
-            self.p = np.ones(self.regularizer.shape[0]) / self.dimension_size
-            self.q = np.ones(self.regularizer.shape[0]) / self.dimension_size
-
+        self.trained = True
         #Sampling i and j
-        i = np.random.choice(np.arange(self.dimension_size), 1, self.p)
-        j = np.random.choice(np.arange(self.dimension_size), 1, self.q)
+        i = np.random.choice(np.arange(self.regularizer_size), 1, p = self.p)
+        j = np.random.choice(np.arange(self.regularizer_size), 1, p = self.q)
+
 
         #Get corresponding param
-        regularizer = self.regularizer[:, i]
+        regularizer = self.regularizer[i]
         w = self.w[:, i]
         p = self.p[i]
         q = self.q[j]
         omega = self.omega[i]
 
+        #Sum X to doc lvl
+        X_doc = sp.sparse.csr_matrix.sum(X, 0)
+        y_doc = y[0]
+
         #Prediction
-        y_predict = np.dot(X, w)
+        y_predict = 1 / (1 + np.exp(np.dot(X_doc, w)))
 
         #Calculate the grad
-        w_half = w - (self.eta / p) * (y_predict - y) 
+        w_half = w - float((self.eta / p) * (y_predict - y_doc)) * np.transpose(X_doc != 0)
 
         if self.regularize_type[i] == 'w':
-            w = self._word_reg_update(X, w_half, p, regularizer)
+            w = self._word_reg_update(w_half, p, regularizer)
         elif self.regularize_type[i] == 's':
             w = self._sentence_reg_update(X, w, w_half, p, regularizer)
 
-        loss = self._loss(y, y_predict)
+        self.w[:, i] = w
+
+        loss = self._loss(y_doc, y_predict)
         norm = np.linalg.norm(self.w, 1)
 
         omega = omega * np.exp(-self.eta * (loss + regularizer *  norm) / p)
-        q = normalize(omega)
 
-        p = (1 - self.delta) * q + self.delta / self.dimension_size
+        self.omega[i] = omega
+        self.q = self.omega / self.omega.sum()
 
-        #Replace original parameters
-        self.regularizer[:, i]
-        self.w[:, i] = w
+        p = (1 - self.delta) * q + self.delta / self.regularizer_size
         self.p[i] = p
-        self.q[j] = q
-        self.omega[i] = omega  
+        self.p = self.p / self.p.sum()
+
+        #print('p: ', self.p)
+        #print('q: ', self.q)
+        #print('i: ', i)
+        #print('w: ', self.w)
+        print('y: ',y_predict)
+        print('loss: ', loss)
+
+
 
     def predict(self, X):
 
@@ -152,3 +158,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
