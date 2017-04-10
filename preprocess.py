@@ -37,35 +37,43 @@ class Stream20News(object):
     def __init__(self, data_path):
         self.data_path = data_path
 
-    def get_train_cat(self, cat_name):
 
-        train = fetch_20newsgroups(subset = 'train', categories = cat_name, 
+    def get_cat(self, cat_name, mode):
+
+        dat = fetch_20newsgroups(subset = mode, categories = cat_name, 
             remove=('headers', 'footers', 'quotes'), data_home = self.data_path)
-        vectorizer = TfidfVectorizer()
-        vectorizer.fit(train.data)
+
+        if mode == 'train':
+            self.vectorizer = TfidfVectorizer()
+            self.vectorizer.fit(dat.data)
 
         target_list = []
 
         #Tokenize by sentences
-        for i, d in enumerate(train.data):
+        for i, d in enumerate(dat.data):
             d = d.replace('\n', ' ')
-            train.data[i] = sent_tokenize(d)
+            dat.data[i] = sent_tokenize(d)
 
-            for s, sent in enumerate(train.data[i]):
-                train.data[i][s] = vectorizer.transform([sent])
+            for s, sent in enumerate(dat.data[i]):
+                dat.data[i][s] = self.vectorizer.transform([sent])
 
             #Broadcast target to have the same shape
-            tar = np.empty(len(train.data[i]))
-            tar.fill(train.target[i])
+            tar = np.empty(len(dat.data[i]))
+            if dat.target[i] == 0:
+                tar.fill(-1)
+            else:
+                tar.fill(dat.target[i])
 
-            if len(train.data[i]) >  1:
-                train.data[i] = vstack(train.data[i])
-            elif len(train.data[i]) ==  1:
-                train.data[i] = train.data[i][0]
+            if len(dat.data[i]) >  1:
+                dat.data[i] = vstack(dat.data[i])
+            elif len(dat.data[i]) ==  1:
+                dat.data[i] = dat.data[i][0]
             else:
                 continue
 
-            yield (train.data[i], tar)
+            yield (dat.data[i], tar)
+
+
             
 
 def process_stars():

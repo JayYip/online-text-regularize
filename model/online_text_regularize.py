@@ -5,6 +5,7 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.utils.estimator_checks import check_estimator
 from sklearn.utils.validation import check_X_y, check_array
 from sklearn.preprocessing import normalize
+from sklearn import metrics
 import numpy as np
 import scipy as sp
 
@@ -99,7 +100,10 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
         y_doc = y[0]
 
         #Prediction
-        y_predict = 1 / (1 + np.exp(np.dot(X_doc, w)))
+        y_predict = int(np.sign(np.dot(X_doc, w)))
+
+        if y_predict == 0:
+            y_predict = 1
 
         #Calculate the grad
         w_half = w - float((self.eta / p) * (y_predict - y_doc)) * np.transpose(X_doc != 0)
@@ -123,21 +127,49 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
         self.p[i] = p
         self.p = self.p / self.p.sum()
 
-        #print('p: ', self.p)
-        #print('q: ', self.q)
-        #print('i: ', i)
-        #print('w: ', self.w)
-        print('y: ',y_predict)
-        print('loss: ', loss)
-
 
 
     def predict(self, X):
 
-        #Input validation
-        X = check_array(X)
+        #Sampling i and j
+        i = np.random.choice(np.arange(self.regularizer_size), 1, p = self.p)
+        j = np.random.choice(np.arange(self.regularizer_size), 1, p = self.q)
+        w = self.w[:, i]
 
-        return np.dot(X, self.w)
+
+        X_doc = sp.sparse.csr_matrix.sum(X, 0)
+        y_predict = int(np.sign(np.dot(X_doc, w)))
+
+        if y_predict == 0:
+            y_predict = 1
+
+        return y_predict
+
+    def eval(self, gen):
+
+        """
+        This function is used to evaluate the model. This function will
+        create a score attribute of the model.
+        Args:
+            gen: A generator that yields X, y.
+        """
+
+        y_predict = []
+        y_true = []
+
+        while True:
+            X, y = next(gen, (None, None))
+
+            if X is None:
+                break
+            y_true.append(y[0])
+            y_predict.append(self.predict(X))
+
+        self.score = {'accuracy_score': metrics.accuracy_score(y_true, y_predict),
+                            'precision_score': metrics.precision_score(y_true, y_predict),
+                            'recall_score': metrics.recall_score(y_true, y_predict),
+                            'f1_score': metrics.f1_score(y_true, y_predict)}
+
          
 
     def _shape_check(self):
