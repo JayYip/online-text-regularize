@@ -103,5 +103,3 @@ def prepare_data(data_path):
 
             elif data == 'sle_movieReviews.tar.gz':
                 process_movie()
-
-
