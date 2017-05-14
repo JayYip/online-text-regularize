@@ -13,7 +13,6 @@ def trainer(train_gen, regularizer, delta, eta, regularize_type):
 
     model = OnlineTextReg(regularizer, delta, eta, regularize_type)
 
-    X = 0
     while True:
         X, y = next(train_gen, (None, None))
 
