@@ -18,12 +18,13 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
         delta: Smoothing parameter. [0,1]
         eta: Step size
     """
-    def __init__(self, regularizer, delta, eta, regularize_type):
+    def __init__(self, regularizer, delta, eta, regularize_type, loss = 'logit'):
         super(OnlineTextReg, self).__init__()
         self.regularizer = regularizer
         self.delta = delta
         self.eta = eta
         self.regularize_type = regularize_type
+        self.loss = loss
 
         self.regularizer_size = self.regularizer.shape[0]
 
@@ -39,7 +40,12 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
 
     def _loss(self, y, y_predict):
         """Calculate the empirical loss"""
-        return np.log(1+np.exp(- y * y_predict))
+        if self.loss == 'logit':
+            return np.log(1+np.exp(- y * y_predict))
+        elif self.loss == 'hinge':
+            return np.max([0, 1 - y*y_predict])
+        elif self.loss == 'square':
+            return np.square(y - y_predict)
 
     def _word_reg_update(self, w_half, p, regularizer):
 
@@ -106,7 +112,14 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
             y_predict = 1
 
         #Calculate the grad
-        w_half = w - float((self.eta / p) * (y_predict - y_doc)) * np.transpose(X_doc != 0)
+        if self.loss == 'logit':
+            grad = -y_doc * X_doc / (1 + np.exp(y_doc * y_predict))
+        elif self.loss == 'hinge':
+            grad = np.max([0, -y_doc*y_predict])
+        elif self.loss == 'square':
+            grad = (y_predict - y_doc) * X_doc
+
+        w_half = w - (self.eta / p) * grad * np.transpose(X_doc != 0)
 
         if self.regularize_type[i] == 'w':
             w = self._word_reg_update(w_half, p, regularizer)
@@ -127,6 +140,9 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
         self.p[i] = p
         self.p = self.p / self.p.sum()
 
+    #def fit(self, X, y):
+    #    for i, row in enumerate(X):
+    #        self._fit(row, y[i])
 
 
     def predict(self, X):
@@ -144,6 +160,10 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
             y_predict = 1
 
         return y_predict
+
+    #def predict(self, X):
+    #    for i, row in enumerate(X):
+    #        self._fit(row, y[i])
 
     def eval(self, gen):
 

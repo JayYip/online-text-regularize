@@ -94,10 +94,10 @@ def print_score(score_dict):
 
 def main():
     
-    regularizer = np.array([0.01, 0.02, 0.03])
+    regularizer = np.exp2(range(-6, 6, 1))
     delta = 0.5
     eta = 0.01
-    regularize_type = ['w', 'w', 'w']
+    regularize_type = ['w'] * regularizer.shape[0]
 
     print_score(news_experiments(regularizer, delta, eta, regularize_type))
     print_score(movie_experiments(regularizer, delta, eta, regularize_type))
