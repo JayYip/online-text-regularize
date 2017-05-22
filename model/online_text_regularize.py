@@ -9,34 +9,10 @@ from sklearn import metrics
 import numpy as np
 import scipy as sp
 
-class OnlineTextReg(BaseEstimator, ClassifierMixin):
-    """
-    Online Model Selection Algorithm for Spare Regularizer
-
-    Init Args:
-        regularizer: numpy array of regularizer (Lambda in paper) with the shape of [vocab_size, num_regularizer]
-        delta: Smoothing parameter. [0,1]
-        eta: Step size
-    """
-    def __init__(self, regularizer, delta, eta, regularize_type, loss = 'logit'):
-        super(OnlineTextReg, self).__init__()
-        self.regularizer = regularizer
-        self.delta = delta
-        self.eta = eta
-        self.regularize_type = regularize_type
-        self.loss = loss
-
-        self.regularizer_size = self.regularizer.shape[0]
-
-        #Initialize model variables
-        self.trained = False
-        self.trained_count = 0
-
-        assert isinstance(regularizer, np.ndarray), 'Regularizer should be a numpy ndarray, %s found.' % type(regularizer)
-
-        assert delta >= 0 and delta <= 1, 'delta should be between 0 to 1, %s found.' % str(delta)
-
-        assert eta > 0, 'eta should be bigger than 0, %s found.' % str(eta)
+class base():
+    """docstring for base"""
+    def __init__(self):
+        pass
 
     def _loss(self, y, y_predict):
         """Calculate the empirical loss"""
@@ -66,11 +42,46 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
 
             w[ind] = w_sen
 
+    def fit(self, X1, y1):
+        for i, row in enumerate(X1):
+            self.fit_single(row, y1[i])
 
-            
+    def predict(self, X):
+        p = []
+        for row in X:
+            p.append(self.predict_single(row))
+        return p    
 
 
-    def fit(self, X, y):
+class OMSA(base, BaseEstimator, ClassifierMixin):
+    """
+    Online Model Selection Algorithm for Spare Regularizer
+
+    Init Args:
+        regularizer: numpy array of regularizer (Lambda in paper) with the shape of [vocab_size, num_regularizer]
+        delta: Smoothing parameter. [0,1]
+        eta: Step size
+    """
+    def __init__(self, regularizer, delta, eta, regularize_type, loss = 'logit'):
+        self.regularizer = regularizer
+        self.delta = delta
+        self.eta = eta
+        self.regularize_type = regularize_type
+        self.loss = loss
+
+        self.regularizer_size = self.regularizer.shape[0]
+
+        #Initialize model variables
+        self.trained = False
+        self.trained_count = 0
+
+        assert isinstance(regularizer, np.ndarray), 'Regularizer should be a numpy ndarray, %s found.' % type(regularizer)
+
+        assert delta >= 0 and delta <= 1, 'delta should be between 0 to 1, %s found.' % str(delta)
+
+        assert eta > 0, 'eta should be bigger than 0, %s found.' % str(eta)
+
+    def fit_single(self, X, y):
         """
         Train the model using one instance.
 
@@ -115,9 +126,11 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
         if self.loss == 'logit':
             grad = -y_doc * X_doc / (1 + np.exp(y_doc * y_predict))
         elif self.loss == 'hinge':
-            grad = np.max([0, -y_doc*y_predict])
+            grad = -y_doc*X_doc
+            grad[grad < 0] = 0
         elif self.loss == 'square':
             grad = (y_predict - y_doc) * X_doc
+
 
         w_half = w - (self.eta / p) * grad * np.transpose(X_doc != 0)
 
@@ -126,6 +139,7 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
         elif self.regularize_type[i] == 's':
             w = self._sentence_reg_update(X, w, w_half, p, regularizer)
 
+
         self.w[:, i] = w
 
         loss = self._loss(y_doc, y_predict)
@@ -133,19 +147,15 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
 
         omega = omega * np.exp(-self.eta * (loss + regularizer *  norm) / p)
 
-        self.omega[i] = omega
+        self.omega[i] = np.max([omega, 1e-6])
         self.q = self.omega / self.omega.sum()
 
         p = (1 - self.delta) * q + self.delta / self.regularizer_size
         self.p[i] = p
         self.p = self.p / self.p.sum()
 
-    #def fit(self, X, y):
-    #    for i, row in enumerate(X):
-    #        self._fit(row, y[i])
 
-
-    def predict(self, X):
+    def predict_single(self, X):
 
         #Sampling i and j
         i = np.random.choice(np.arange(self.regularizer_size), 1, p = self.p)
@@ -161,53 +171,82 @@ class OnlineTextReg(BaseEstimator, ClassifierMixin):
 
         return y_predict
 
-    #def predict(self, X):
-    #    for i, row in enumerate(X):
-    #        self._fit(row, y[i])
-
-    def eval(self, gen):
-
-        """
-        This function is used to evaluate the model. This function will
-        create a score attribute of the model.
-        Args:
-            gen: A generator that yields X, y.
-        """
-
-        y_predict = []
-        y_true = []
-
-        while True:
-            X, y = next(gen, (None, None))
-
-            if X is None:
-                break
-            y_true.append(y[0])
-            y_predict.append(self.predict(X))
-
-        self.score = {'accuracy_score': metrics.accuracy_score(y_true, y_predict),
-                            'precision_score': metrics.precision_score(y_true, y_predict),
-                            'recall_score': metrics.recall_score(y_true, y_predict),
-                            'f1_score': metrics.f1_score(y_true, y_predict)}
-
          
+class L1RegAdaGrad(base, BaseEstimator, ClassifierMixin):
+    """docstring for L1Reg"""
+    def __init__(self, regularizer, eta, regularize_type = 'w', loss = 'logit', fudge_factor = 1e-8):
+        self.regularizer = regularizer
+        self.eta = eta
+        self.regularize_type = regularize_type
+        self.loss = loss
+        self.fudge_factor = fudge_factor
 
-    def _shape_check(self):
-        """Test the shapes of parameters"""
+        #Initialize model variables
+        self.trained = False
+        self.trained_count = 0
 
-        m = self.regularizer.shape[1]
-        v = self.regularizer.shape[0]
+        assert eta > 0, 'eta should be bigger than 0, %s found.' % str(eta)
 
-        assert self.w.shape == self.regularizer.shape
-        assert self.omega.shape[0] == m
-        assert self.p.shape[0] == m
-        assert self.q.shape[0] == m
+    def fit_single(self, X, y):
+        """
+        Train the model using one instance.
+
+        Args:
+            X: numpy.ndarray with the shape of [number_of_sentence, vocab_size]. Each sentence should be in one
+                row. All rows will be summed to one row when prediction.
+            y: Scaler. 
+        """
+
+        self.trained_count += 1
+
+        if not self.trained:
+            self.w = np.zeros(shape = [X.shape[1], 1])
+            self.gti=np.zeros(self.w.T.shape)
 
 
-        
-def main():
-    check_estimator(OnlineTextReg)
+        self.trained = True
 
-if __name__ == '__main__':
-    main()
+        #Get corresponding param
+        regularizer = self.regularizer
+        w = self.w
 
+        #Sum X to doc lvl
+        X_doc = sp.sparse.csr_matrix.sum(X, 0)
+        y_doc = y[0]
+
+        #Prediction
+        y_predict = int(np.sign(np.dot(X_doc, w)))
+
+        if y_predict == 0:
+            y_predict = 1
+
+        #Calculate the grad
+        if self.loss == 'logit':
+            grad = -y_doc * X_doc / (1 + np.exp(y_doc * y_predict))
+        elif self.loss == 'hinge':
+            grad = np.max([0, -y_doc*y_predict])
+        elif self.loss == 'square':
+            grad = (y_predict - y_doc) * X_doc
+
+        #Adjust gradient
+        self.gti+=np.square(grad)
+        adjusted_grad = np.divide(grad, self.fudge_factor + np.sqrt(self.gti))
+
+        w_half = w - self.eta * adjusted_grad* np.transpose(X_doc != 0)
+
+        if self.regularize_type == 'w':
+            w = self._word_reg_update(w_half, 1, regularizer)
+        elif self.regularize_type == 's':
+            w = self._sentence_reg_update(X, w, w_half, 1, regularizer)
+
+        self.w = w
+
+    def predict_single(self, X):
+
+        X_doc = sp.sparse.csr_matrix.sum(X, 0)
+        y_predict = int(np.sign(np.dot(X_doc, self.w)))
+
+        if y_predict == 0:
+            y_predict = 1
+
+        return y_predict

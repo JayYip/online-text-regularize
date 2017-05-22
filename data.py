@@ -25,7 +25,7 @@ class Stream20News(object):
         self.data_path = data_path
 
 
-    def get_cat(self, cat_name, mode):
+    def get_dat(self, cat_name, mode):
 
         dat = fetch_20newsgroups(subset = mode, categories = cat_name, 
             remove=('headers', 'footers', 'quotes'), data_home = self.data_path)
@@ -51,14 +51,19 @@ class Stream20News(object):
             else:
                 tar.fill(dat.target[i])
 
+
             if len(dat.data[i]) >  1:
                 dat.data[i] = vstack(dat.data[i])
+                target_list.append(tar)
             elif len(dat.data[i]) ==  1:
                 dat.data[i] = dat.data[i][0]
+                target_list.append(tar)
             else:
-                continue
+                dat.data[i] = None
 
-            yield (dat.data[i], tar)
+        dat.data = [d for d in dat.data if d is not None]
+
+        return np.array(dat.data), np.array(target_list)
 
 class StreamMovies(object):
     """docstring for StreamMovies"""
@@ -67,8 +72,9 @@ class StreamMovies(object):
         self.dat = pickle.load(open(self.data_path, 'rb'))
 
     def get_dat(self,mode):
-        for i, d in enumerate(self.dat[mode]['data']):
-            yield (d, self.dat[mode]['tar'][i])
+        #for i, d in enumerate(self.dat[mode]['data']):
+        #    yield (d, self.dat[mode]['tar'][i])
+        return np.array(self.dat[mode]['data']), np.array(self.dat[mode]['tar'])
 
 class StreamSpeech(object):
     """docstring for StreamMovies"""
@@ -77,6 +83,7 @@ class StreamSpeech(object):
         self.dat = pickle.load(open(self.data_path, 'rb'))
 
     def get_dat(self,mode):
-        for i, d in enumerate(self.dat[mode]['data']):
-            yield (d, self.dat[mode]['tar'][i])
+        #for i, d in enumerate(self.dat[mode]['data']):
+        #    yield (d, self.dat[mode]['tar'][i])
+        return np.array(self.dat[mode]['data']), np.array(self.dat[mode]['tar'])
         
