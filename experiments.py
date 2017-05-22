@@ -7,6 +7,8 @@ import numpy as np
 import os
 import collections
 import time
+import json
+import io
 from sklearn.model_selection import KFold, GridSearchCV, ParameterGrid
 from sklearn import metrics
 
@@ -192,7 +194,7 @@ def print_score(score_dict):
 
 def main():
     
-    regularizer = np.exp2(range(-5, -3, 1))
+    regularizer = np.exp2(range(-6, 6, 1))
     delta = 0.5
     eta = 0.01
     regularize_type = ['w'] * regularizer.shape[0]
@@ -200,11 +202,20 @@ def main():
 
     #experiments fn returns a score dict
     score_dict = news_experiments(regularizer, delta, eta, regularize_type, loss)
+    with io.open('20News.json', 'w', encoding='utf8') as fp:
+        json.dump(score_dict, fp, ensure_ascii=False)
     print_score(score_dict)
 
 
-    print_score(movie_experiments(regularizer, delta, eta, regularize_type, loss))
-    print_score(speech_experiments(regularizer, delta, eta, regularize_type, loss))
+    score_dict = movie_experiments(regularizer, delta, eta, regularize_type, loss)
+    with io.open('MovieReview.json', 'w', encoding='utf8') as fp:
+        json.dump(score_dict, fp, ensure_ascii=False)
+    print_score(score_dict)
+
+    score_dict = speech_experiments(regularizer, delta, eta, regularize_type, loss)
+    with io.open('Speech.json', 'w', encoding='utf8') as fp:
+        json.dump(score_dict, fp, ensure_ascii=False)
+    print_score(score_dict)
 
 if __name__ == '__main__':
     main()

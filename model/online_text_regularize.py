@@ -132,7 +132,7 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
             grad = (y_predict - y_doc) * X_doc
 
 
-        w_half = w - (self.eta / p) * grad * np.transpose(X_doc != 0)
+        w_half = w - ((self.eta / p) * grad).T
 
         if self.regularize_type[i] == 'w':
             w = self._word_reg_update(w_half, p, regularizer)
@@ -224,7 +224,8 @@ class L1RegAdaGrad(base, BaseEstimator, ClassifierMixin):
         if self.loss == 'logit':
             grad = -y_doc * X_doc / (1 + np.exp(y_doc * y_predict))
         elif self.loss == 'hinge':
-            grad = np.max([0, -y_doc*y_predict])
+            grad = -y_doc*X_doc
+            grad[grad < 0] = 0
         elif self.loss == 'square':
             grad = (y_predict - y_doc) * X_doc
 
@@ -232,7 +233,7 @@ class L1RegAdaGrad(base, BaseEstimator, ClassifierMixin):
         self.gti+=np.square(grad)
         adjusted_grad = np.divide(grad, self.fudge_factor + np.sqrt(self.gti))
 
-        w_half = w - self.eta * adjusted_grad* np.transpose(X_doc != 0)
+        w_half = w - (self.eta * adjusted_grad).T
 
         if self.regularize_type == 'w':
             w = self._word_reg_update(w_half, 1, regularizer)
