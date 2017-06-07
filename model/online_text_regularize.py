@@ -51,7 +51,6 @@ class base():
 
     def fit(self, X1, y1, epoch = 1):
         for i in range(epoch):
-            print(i)
             permute = np.random.permutation(len(X1))
             #for i, row in enumerate(X1):
             #    self.fit_single_with_bias(row, y1[i])
