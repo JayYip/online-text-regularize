@@ -21,6 +21,7 @@ import gensim
 import numpy as np
 import pickle
 import random
+import scipy as sp
 
 def download_data(data, data_path):
 
@@ -106,6 +107,10 @@ def process_movies(data, data_path):
     for mode in dat:
         for i, doc in enumerate(dat[mode]['data']):
             dat[mode]['data'][i] = vectorizer.transform(doc)
+            #concate the bias
+            dat[mode]['data'][i] = np.concatenate((dat[mode]['data'][i].toarray(), 
+                np.ones((dat[mode]['data'][i].shape[0], 1) ) ), axis = 1)
+            dat[mode]['data'][i] = sp.sparse.csr_matrix(dat[mode]['data'][i])
 
     pickle.dump(dat, open(os.path.join(data_path, 'movies.pkl'), 'wb'))
 
@@ -182,6 +187,10 @@ def process_speech(data, data_path):
     for mode in dat:
         for i, doc in enumerate(dat[mode]['data']):
             dat[mode]['data'][i] = vectorizer.transform(doc)
+            #concate the bias
+            dat[mode]['data'][i] = np.concatenate((dat[mode]['data'][i].toarray(), 
+                np.ones((dat[mode]['data'][i].shape[0], 1) ) ), axis = 1)
+            dat[mode]['data'][i] = sp.sparse.csr_matrix(dat[mode]['data'][i])
 
     pickle.dump(dat, open(os.path.join(data_path, 'speech.pkl'), 'wb'))
 

@@ -38,7 +38,9 @@ def OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
 
         start = time.time()
         for train_index, test_index in kf.split(X):
-            model.fit(X[train_index], y[train_index])
+
+            #Set epoch
+            model.fit(X[train_index], y[train_index], epoch = 2)
             score_dict[l + ' CV_Score'].append(
                 metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))
 
@@ -195,8 +197,8 @@ def print_score(score_dict):
 def main():
     
     regularizer = np.exp2(range(-6, 6, 1))
-    delta = 0.5
-    eta = 0.01
+    delta = 0.1
+    eta = 0.001
     regularize_type = ['w'] * regularizer.shape[0]
     loss = ['logit', 'square', 'hinge']
 

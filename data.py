@@ -12,6 +12,7 @@ import collections
 import gensim
 import numpy as np
 import pickle
+import scipy as sp
 
 
 class Stream20News(object):
@@ -43,6 +44,10 @@ class Stream20News(object):
 
             for s, sent in enumerate(dat.data[i]):
                 dat.data[i][s] = self.vectorizer.transform([sent])
+                #concate the bias
+                dat.data[i][s] = np.concatenate((dat.data[i][s].toarray(), 
+                    np.ones((dat.data[i][s].shape[0], 1) ) ), axis = 1)
+                dat.data[i][s] = sp.sparse.csr_matrix(dat.data[i][s])
 
             #Broadcast target to have the same shape
             tar = np.empty(len(dat.data[i]))
