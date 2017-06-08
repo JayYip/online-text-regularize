@@ -211,8 +211,9 @@ class RegAdam(base, BaseEstimator, ClassifierMixin):
         self.M = self.beta1 * self.M + (1. - self.beta1) * grad.T
         self.R = self.beta2 * self.R + (1. - self.beta2) * np.square(grad.T)
 
-        m_k_hat = self.M / (1. - self.beta1**(self.trained_count / self.batch_size))
-        r_k_hat = self.R / (1. - self.beta2**(self.trained_count / self.batch_size))
+
+        m_k_hat = self.M / (1. - self.beta1**(int(self.trained_count / self.batch_size)))
+        r_k_hat = self.R / (1. - self.beta2**(int(self.trained_count / self.batch_size)))
 
         adjusted_grad = np.divide(m_k_hat, (np.sqrt(r_k_hat) + self.epsilon)).T
 

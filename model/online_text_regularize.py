@@ -26,12 +26,13 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
         self.fit: Train model with a batch of data with bias
         self.fit_single_with_bias: Train single instance with bias
     """
-    def __init__(self, regularizer, delta, eta, regularize_type, loss = 'logit'):
+    def __init__(self, regularizer, delta, eta, regularize_type, loss = 'logit', algo = 1):
         self.regularizer = regularizer
         self.delta = delta
         self.eta = eta
         self.regularize_type = regularize_type
         self.loss = loss
+        self.algo = algo
 
         self.regularizer_size = self.regularizer.shape[0]
 
@@ -115,6 +116,7 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
 
         if not self.trained:
             self.w = np.zeros(shape = [X.shape[1], self.regularizer_size])
+            self.w_bar = np.zeros(shape = [X.shape[1], self.regularizer_size])
             self.omega = np.ones(self.regularizer_size)
             self.p = np.ones(self.regularizer_size) / self.regularizer_size
             self.q = np.ones(self.regularizer_size) / self.regularizer_size
@@ -148,6 +150,10 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
         w = np.concatenate((w, w_half[:, -1]), axis = 1)
 
         self.w[:, i] = w
+
+        #Algo 2
+        if self.algo == 2:
+            self.w_bar = (self.trained_count - 1) * self.w_bar / self.trained_count + self.w / self.trained_count
 
         loss = self._loss(y_doc, y_predict)
         norm = np.linalg.norm(self.w, 1)
@@ -194,3 +200,4 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
             y_predict = 1
 
         return y_predict
+

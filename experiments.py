@@ -63,9 +63,9 @@ def baseline_CV(train_dat, test_dat, regularizer, eta, loss):
     parameters = {'regularizer': regularizer}
     parameters_grid = ParameterGrid(parameters)
 
-    score_dict = collections.defaultdict(list)
-
     def get_score(model):
+
+        score_dict = collections.defaultdict(list)
 
         for l in loss:
 
