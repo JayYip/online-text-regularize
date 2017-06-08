@@ -27,33 +27,39 @@ def OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
     score_dict = collections.defaultdict(list)
 
     for l in loss:
-        model = OMSA(regularizer, delta, eta, regularize_type, loss = l)
 
-        kf = KFold(n_splits=5, shuffle=True)
+        for algo in [1,2]:
 
-        #The X and y is sentence level, need to convert to doc level when 
-        #   calculating the score.
-        X, y = train_dat
-        test_X, sen_test_y = test_dat
-        test_y = sen2doc(sen_test_y)
+            model = OMSA(regularizer, delta, eta, regularize_type, loss = l, algo = algo)
 
-        start = time.time()
-        for train_index, test_index in kf.split(X):
+            kf = KFold(n_splits=5, shuffle=True)
 
-            #Set epoch
-            model.fit(X[train_index], y[train_index], epoch = 2)
-            score_dict[l + ' CV_Score'].append(
-                metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))
+            #The X and y is sentence level, need to convert to doc level when 
+            #   calculating the score.
+            X, y = train_dat
+            test_X, sen_test_y = test_dat
+            test_y = sen2doc(sen_test_y)
 
-            score_dict[l + ' Test_Score'].append(
-                metrics.accuracy_score(test_y, model.predict(test_X)))
+            start = time.time()
+            for train_index, test_index in kf.split(X):
 
-        end = time.time()
+                #Init the model parm
+                model.trained = False
 
-        #Mean
-        score_dict[l + ' CV_Score'] = np.mean(score_dict[l + ' CV_Score'])
-        score_dict[l + ' Test_Score'] = np.mean(score_dict[l + ' Test_Score'])
-        score_dict[l + ' time'] = end - start
+                #Set epoch
+                model.fit(X[train_index], y[train_index], epoch = 2)
+                score_dict[l + ' CV_Score'].append(
+                    metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))
+
+                score_dict[l + ' Test_Score'].append(
+                    metrics.accuracy_score(test_y, model.predict(test_X)))
+
+            end = time.time()
+
+            #Mean
+            score_dict['Algo %d ' % algo + l + ' CV_Score'] = np.mean(score_dict[l + ' CV_Score'])
+            score_dict['Algo %d ' % algo + l + ' Test_Score'] = np.mean(score_dict[l + ' Test_Score'])
+            score_dict['Algo %d ' % algo + l + ' time'] = end - start
 
     return score_dict
 
@@ -93,6 +99,10 @@ def baseline_CV(train_dat, test_dat, regularizer, eta, loss):
 
                 #5 Fold CV
                 for train_index, test_index in kf.split(X):
+                    
+                    #Init the model parm
+                    model.trained = False
+
                     model.fit(X[train_index], y[train_index])
                     cv_score.append(
                         metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))

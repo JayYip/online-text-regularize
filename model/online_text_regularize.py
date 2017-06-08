@@ -124,18 +124,20 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
         self.trained = True
         #Sampling i and j
         i = int(np.random.choice(np.arange(self.regularizer_size), 1, p = self.p))
-        #j = int(np.random.choice(np.arange(self.regularizer_size), 1, p = self.q))
 
 
         #Get corresponding param
         regularizer = self.regularizer[i]
         w = self.w[:, i]
+        w_bar = self.w_bar[:, i]
         p = self.p[i]
-        #q = self.q[j]
         omega = self.omega[i]
 
         #Get the gradient
-        y_predict, y_doc, grad = self._get_gradient(X, y, w, p)
+        if self.algo == 2:
+            y_predict, y_doc, grad = self._get_gradient(X, y, w_bar, p)
+        else:
+            y_predict, y_doc, grad = self._get_gradient(X, y, w, p)
 
         w_half = w - ((self.eta / p) * grad)
 
@@ -191,10 +193,15 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
         i = np.random.choice(np.arange(self.regularizer_size), 1, p = self.p)
         #j = np.random.choice(np.arange(self.regularizer_size), 1, p = self.q)
         w = self.w[:, i]
+        w_bar = self.w_bar[:, i]
 
 
         X_doc = sp.sparse.csr_matrix.sum(X, 0)
-        y_predict = int(np.sign(np.dot(X_doc, w)))
+
+        if self.algo == 2:
+            y_predict = int(np.sign(np.dot(X_doc, w_bar)))
+        else:
+            y_predict = int(np.sign(np.dot(X_doc, w)))
 
         if y_predict == 0:
             y_predict = 1
