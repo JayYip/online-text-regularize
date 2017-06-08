@@ -69,8 +69,6 @@ def baseline_CV(train_dat, test_dat, regularizer, eta, loss):
 
         for l in loss:
 
-            print('Baseline', l)
-
             final_cv_score = []
             final_test_score = []
 
