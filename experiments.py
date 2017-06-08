@@ -1,6 +1,7 @@
 # Train the model
 
 from model.online_text_regularize import *
+from model.baseline import *
 from data import *
 
 import numpy as np
@@ -64,50 +65,63 @@ def baseline_CV(train_dat, test_dat, regularizer, eta, loss):
 
     score_dict = collections.defaultdict(list)
 
-    for l in loss:
+    def get_score(model):
 
-        start = time.time()
-        final_cv_score = []
-        final_test_score = []
+        for l in loss:
 
-        #Loop through parm gird
-        for i, param in enumerate(parameters_grid):
+            print('Baseline', l)
 
-            cv_score = []
-            test_score = []
+            final_cv_score = []
+            final_test_score = []
 
-            model = L1RegAdaGrad(0.1, eta, 'w', loss = l)
-            model.set_params(**param)
+            start = time.time()
 
-            kf = KFold(n_splits=5, shuffle=True)
+            #Loop through parm gird
+            for i, param in enumerate(parameters_grid):
 
-            #The X and y is sentence level, need to convert to doc level when 
-            #   calculating the score.
-            X, y = train_dat
-            test_X, sen_test_y = test_dat
-            test_y = sen2doc(sen_test_y)
+                cv_score = []
+                test_score = []
 
-            #5 Fold CV
-            for train_index, test_index in kf.split(X):
-                model.fit(X[train_index], y[train_index])
-                cv_score.append(
-                    metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))
+                kf = KFold(n_splits=5, shuffle=True)
 
-                test_score.append(
-                    metrics.accuracy_score(test_y, model.predict(test_X)))
+                #The X and y is sentence level, need to convert to doc level when 
+                #   calculating the score.
+                X, y = train_dat
+                test_X, sen_test_y = test_dat
+                test_y = sen2doc(sen_test_y)
 
-            final_cv_score.append(np.mean(cv_score))
-            final_test_score.append(np.mean(test_score))
+                model.loss = l
+                model.set_params(**param)
 
-        end = time.time()
+                #5 Fold CV
+                for train_index, test_index in kf.split(X):
+                    model.fit(X[train_index], y[train_index])
+                    cv_score.append(
+                        metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))
 
-        #Get the best estimator
-        max_ind = np.argmax(final_cv_score)
-        score_dict[l + ' CV_Score'] = final_cv_score[max_ind]
-        score_dict[l + ' Test_Score'] = final_test_score[max_ind]
-        score_dict[l + ' time'] = end - start
+                    test_score.append(
+                        metrics.accuracy_score(test_y, model.predict(test_X)))
 
-    return score_dict
+                final_cv_score.append(np.mean(cv_score))
+                final_test_score.append(np.mean(test_score))
+
+            end = time.time()
+
+            #Get the best estimator
+            max_ind = np.argmax(final_cv_score)
+            score_dict[l + ' CV_Score'] = final_cv_score[max_ind]
+            score_dict[l + ' Test_Score'] = final_test_score[max_ind]
+            score_dict[l + ' time'] = end - start
+
+        return score_dict
+
+    adam_model = RegAdam(0.1, eta, 'w')
+    adam_score_dict = get_score(adam_model)
+
+    ada_model = RegAdaGrad(0.1, eta, 'w')
+    adagrad_score_dict = get_score(ada_model)
+
+    return adagrad_score_dict, adam_score_dict
 
 
 def news_experiments(regularizer, delta, eta, regularize_type, loss):
@@ -133,12 +147,11 @@ def news_experiments(regularizer, delta, eta, regularize_type, loss):
         test_dat = new_stream.get_dat(cat_name, 'test')
         omsa_score_dict = OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
         #baseline
-        adagrad_score_dict = baseline_CV(train_dat, test_dat, regularizer, eta, loss)
+        adagrad_score_dict, adam_score_dict = baseline_CV(train_dat, test_dat, regularizer, eta, loss)
 
         result[' vs '.join(cat_name)]['OMSA'] = omsa_score_dict
         result[' vs '.join(cat_name)]['Adagrad'] = adagrad_score_dict
-
-
+        result[' vs '.join(cat_name)]['Adam'] = adam_score_dict
 
     return result
 
@@ -155,10 +168,11 @@ def movie_experiments(regularizer, delta, eta, regularize_type, loss):
     test_dat = new_stream.get_dat('test')
     omsa_score_dict = OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
     #baseline
-    adagrad_score_dict = baseline_CV(train_dat, test_dat, regularizer, eta, loss)
+    adagrad_score_dict, adam_score_dict = baseline_CV(train_dat, test_dat, regularizer, eta, loss)
 
     result['Movies Sentiment']['OMSA'] = omsa_score_dict
     result['Movies Sentiment']['Adagrad'] = adagrad_score_dict
+    result['Movies Sentiment']['Adam'] = adam_score_dict
 
     return result
 
@@ -175,10 +189,11 @@ def speech_experiments(regularizer, delta, eta, regularize_type, loss):
     test_dat = new_stream.get_dat('test')
     omsa_score_dict = OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
     #baseline
-    adagrad_score_dict = baseline_CV(train_dat, test_dat, regularizer, eta, loss)
+    adagrad_score_dict, adam_score_dict = baseline_CV(train_dat, test_dat, regularizer, eta, loss)
 
     result['Speech Sentiment']['OMSA'] = omsa_score_dict
     result['Speech Sentiment']['Adagrad'] = adagrad_score_dict
+    result['Speech Sentiment']['Adam'] = adam_score_dict
 
     return result
 
@@ -196,10 +211,10 @@ def print_score(score_dict):
 
 def main():
     
-    regularizer = np.exp2(range(-6, 6, 1))
+    regularizer = np.exp2(range(-6, 7, 1))
     delta = 0.1
     eta = 0.001
-    regularize_type = ['w'] * regularizer.shape[0]
+    regularize_type = ['sq'] * regularizer.shape[0]
     loss = ['logit', 'square', 'hinge']
 
     #experiments fn returns a score dict
