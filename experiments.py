@@ -47,11 +47,11 @@ def OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
                 model.trained = False
 
                 #Set epoch
-                model.fit(X[train_index], y[train_index], epoch = 2)
-                score_dict[l + ' CV_Score'].append(
+                model.fit(X[train_index], y[train_index], epoch = 10)
+                score_dict['Algo %d ' % algo + l + ' CV_Score'].append(
                     metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))
 
-                score_dict[l + ' Test_Score'].append(
+                score_dict['Algo %d ' % algo + l + ' Test_Score'].append(
                     metrics.accuracy_score(test_y, model.predict(test_X)))
 
             end = time.time()
@@ -63,11 +63,11 @@ def OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
 
     return score_dict
 
-def baseline_CV(train_dat, test_dat, regularizer, eta, loss):
+def baseline_CV(train_dat, test_dat, regularizer, regularize_type, eta, loss):
 
     #Create parameters grid
-    parameters = {'regularizer': regularizer}
-    parameters_grid = ParameterGrid(parameters)
+    #parameters = {'regularizer': regularizer}
+    #parameters_grid = ParameterGrid(parameters)
 
     def get_score(model):
 
@@ -81,7 +81,7 @@ def baseline_CV(train_dat, test_dat, regularizer, eta, loss):
             start = time.time()
 
             #Loop through parm gird
-            for i, param in enumerate(parameters_grid):
+            for i, reg in enumerate(regularizer):
 
                 cv_score = []
                 test_score = []
@@ -95,11 +95,13 @@ def baseline_CV(train_dat, test_dat, regularizer, eta, loss):
                 test_y = sen2doc(sen_test_y)
 
                 model.loss = l
-                model.set_params(**param)
+                model.regularizer = reg
+                model.regularize_type = regularize_type[i]
+                #model.set_params(**param)
 
                 #5 Fold CV
                 for train_index, test_index in kf.split(X):
-                    
+
                     #Init the model parm
                     model.trained = False
 
@@ -155,7 +157,7 @@ def news_experiments(regularizer, delta, eta, regularize_type, loss):
         test_dat = new_stream.get_dat(cat_name, 'test')
         omsa_score_dict = OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
         #baseline
-        adagrad_score_dict, adam_score_dict = baseline_CV(train_dat, test_dat, regularizer, eta, loss)
+        adagrad_score_dict, adam_score_dict = baseline_CV(train_dat, test_dat, regularizer, regularize_type, eta, loss)
 
         result[' vs '.join(cat_name)]['OMSA'] = omsa_score_dict
         result[' vs '.join(cat_name)]['Adagrad'] = adagrad_score_dict
@@ -176,7 +178,7 @@ def movie_experiments(regularizer, delta, eta, regularize_type, loss):
     test_dat = new_stream.get_dat('test')
     omsa_score_dict = OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
     #baseline
-    adagrad_score_dict, adam_score_dict = baseline_CV(train_dat, test_dat, regularizer, eta, loss)
+    adagrad_score_dict, adam_score_dict = baseline_CV(train_dat, test_dat, regularizer, regularize_type, eta, loss)
 
     result['Movies Sentiment']['OMSA'] = omsa_score_dict
     result['Movies Sentiment']['Adagrad'] = adagrad_score_dict
@@ -197,7 +199,7 @@ def speech_experiments(regularizer, delta, eta, regularize_type, loss):
     test_dat = new_stream.get_dat('test')
     omsa_score_dict = OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
     #baseline
-    adagrad_score_dict, adam_score_dict = baseline_CV(train_dat, test_dat, regularizer, eta, loss)
+    adagrad_score_dict, adam_score_dict = baseline_CV(train_dat, test_dat, regularizer, regularize_type, eta, loss)
 
     result['Speech Sentiment']['OMSA'] = omsa_score_dict
     result['Speech Sentiment']['Adagrad'] = adagrad_score_dict
@@ -220,7 +222,7 @@ def print_score(score_dict):
 def main():
     
     regularizer = np.exp2(range(-6, 7, 1))
-    delta = 0.1
+    delta = 0.05
     eta = 0.001
     regularize_type = ['sq'] * regularizer.shape[0]
     loss = ['logit', 'square', 'hinge']

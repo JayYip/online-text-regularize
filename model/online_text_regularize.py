@@ -78,7 +78,7 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
         omega = self.omega[i]
 
         #Get the gradient
-        y_predict, y_doc, grad = self._get_gradient(X, y, w, p)
+        y_predict, y_doc, grad = self._get_gradient(X, y, w)
 
         w_half = w - ((self.eta / p) * grad)
 
@@ -135,9 +135,9 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
 
         #Get the gradient
         if self.algo == 2:
-            y_predict, y_doc, grad = self._get_gradient(X, y, w_bar, p)
+            y_predict, y_doc, grad = self._get_gradient(X, y, w_bar)
         else:
-            y_predict, y_doc, grad = self._get_gradient(X, y, w, p)
+            y_predict, y_doc, grad = self._get_gradient(X, y, w)
 
         w_half = w - ((self.eta / p) * grad)
 
@@ -155,14 +155,15 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
 
         #Algo 2
         if self.algo == 2:
-            self.w_bar = (self.trained_count - 1) * self.w_bar / self.trained_count + self.w / self.trained_count
+            self.w_bar[:, i] = (self.trained_count - 1) * w_bar / self.trained_count + w / self.trained_count
 
         loss = self._loss(y_doc, y_predict)
         norm = np.linalg.norm(self.w, 1)
 
         omega = omega * np.exp(-self.eta * (loss + regularizer *  norm) / p)
 
-        self.omega[i] = np.max([omega, 1e-6])
+        #Avoid 0
+        self.omega[i] = np.max([omega, 1e-8])
         self.q = self.omega / self.omega.sum()
 
         self.p = (1 - self.delta) * self.q + self.delta / self.regularizer_size
@@ -187,19 +188,15 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
         return y_predict
 
     def predict_single_with_bias(self, X):
-
-
         #Sampling i and j
         i = np.random.choice(np.arange(self.regularizer_size), 1, p = self.p)
-        #j = np.random.choice(np.arange(self.regularizer_size), 1, p = self.q)
         w = self.w[:, i]
         w_bar = self.w_bar[:, i]
-
 
         X_doc = sp.sparse.csr_matrix.sum(X, 0)
 
         if self.algo == 2:
-            y_predict = int(np.sign(np.dot(X_doc, w_bar)))
+            y_predict = int(np.sign(np.dot(X_doc, w_bar) ) )
         else:
             y_predict = int(np.sign(np.dot(X_doc, w)))
 
@@ -207,4 +204,3 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
             y_predict = 1
 
         return y_predict
-

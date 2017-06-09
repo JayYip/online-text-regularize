@@ -22,7 +22,7 @@ class base():
         elif self.loss == 'square':
             return np.square(y - y_predict)
 
-    def _get_gradient(self, X, y, w, p):
+    def _get_gradient(self, X, y, w):
 
         #Sum X to doc lvl
         X_doc = sp.sparse.csr_matrix.sum(X, 0)
@@ -75,8 +75,7 @@ class base():
     def fit(self, X1, y1, epoch = 1):
         for i in range(epoch):
             permute = np.random.permutation(len(X1))
-            #for i, row in enumerate(X1):
-            #    self.fit_single_with_bias(row, y1[i])
+            
             for j in permute:
                 self.fit_single_with_bias(X1[j], y1[j])
 
