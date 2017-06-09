@@ -163,7 +163,7 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
         omega = omega * np.exp(-self.eta * (loss + regularizer *  norm) / p)
 
         #Avoid 0
-        self.omega[i] = np.max([omega, 1e-8])
+        self.omega[i] = np.max([omega, 1e-6])
         self.q = self.omega / self.omega.sum()
 
         self.p = (1 - self.delta) * self.q + self.delta / self.regularizer_size
