@@ -57,8 +57,10 @@ def OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
             end = time.time()
 
             #Mean
-            score_dict['Algo %d ' % algo + l + ' CV_Score'] = np.mean(score_dict[l + ' CV_Score'])
-            score_dict['Algo %d ' % algo + l + ' Test_Score'] = np.mean(score_dict[l + ' Test_Score'])
+            score_dict['Algo %d ' % algo + l + ' CV_Score'] = np.mean(
+                score_dict['Algo %d ' % algo + l + ' CV_Score'])
+            score_dict['Algo %d ' % algo + l + ' Test_Score'] = np.mean(
+                score_dict['Algo %d ' % algo + l + ' Test_Score'])
             score_dict['Algo %d ' % algo + l + ' time'] = end - start
 
     return score_dict
