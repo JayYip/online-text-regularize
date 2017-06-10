@@ -163,8 +163,9 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
         omega = omega * np.exp(-self.eta * (loss + regularizer *  norm) / p)
 
         #Avoid 0
-        self.omega[i] = np.max([omega, 1e-6])
+        self.omega[i] = np.max([omega, 1e-12])
         self.q = self.omega / self.omega.sum()
+        self.omega = self.q
 
         self.p = (1 - self.delta) * self.q + self.delta / self.regularizer_size
         #self.p[i] = p
@@ -189,9 +190,9 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
 
     def predict_single_with_bias(self, X):
         #Sampling i and j
-        i = np.random.choice(np.arange(self.regularizer_size), 1, p = self.p)
-        w = self.w[:, i]
-        w_bar = self.w_bar[:, i]
+        j = np.random.choice(np.arange(self.regularizer_size), 1, p = self.q)
+        w = self.w[:, j]
+        w_bar = self.w_bar[:, j]
 
         X_doc = sp.sparse.csr_matrix.sum(X, 0)
 

@@ -30,7 +30,7 @@ def main():
 
     regularizer = np.exp2(range(-6, 7, 1))
     delta = 0.05
-    eta = 0.001
+    eta = 0.01
     regularize_type = ['sq'] * regularizer.shape[0]
     loss = ['logit', 'square', 'hinge']
 

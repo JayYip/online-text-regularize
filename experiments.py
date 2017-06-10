@@ -47,7 +47,7 @@ def OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
                 model.trained = False
 
                 #Set epoch
-                model.fit(X[train_index], y[train_index], epoch = 5)
+                model.fit(X[train_index], y[train_index], epoch = 10)
                 score_dict['Algo %d ' % algo + l + ' CV_Score'].append(
                     metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))
 
