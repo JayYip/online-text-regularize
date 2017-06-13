@@ -21,12 +21,15 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
         eta: Step size
         regularize_type: 'w': Word reg, 's': sentence reg, 'sq': square reg
         loss: 'logit' for logit loss, 'hinge' for hinge loss, 'square' for square loss
+        decay_factor: Step size decay factor. None default.
 
     Method: 
         self.fit: Train model with a batch of data with bias
         self.fit_single_with_bias: Train single instance with bias
     """
-    def __init__(self, regularizer, delta, eta, regularize_type, loss = 'logit', algo = 1):
+    def __init__(self, regularizer, 
+        delta, eta, regularize_type, 
+        loss = 'logit', algo = 1):
         self.regularizer = regularizer
         self.delta = delta
         self.eta = eta
@@ -95,7 +98,7 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
 
         omega = omega * np.exp(-self.eta * (loss + regularizer *  norm) / p)
 
-        self.omega[i] = np.max([omega, 1e-6])
+        self.omega[i] = np.max([omega, 1e-8])
         self.q = self.omega / self.omega.sum()
 
         p = (1 - self.delta) * q + self.delta / self.regularizer_size
@@ -205,3 +208,4 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
             y_predict = 1
 
         return y_predict
+        

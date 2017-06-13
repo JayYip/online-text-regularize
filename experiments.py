@@ -47,7 +47,7 @@ def OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
                 model.trained = False
 
                 #Set epoch
-                model.fit(X[train_index], y[train_index], epoch = 10)
+                model.fit(X[train_index], y[train_index], epoch = 5, decay_factor = 2)
                 score_dict['Algo %d ' % algo + l + ' CV_Score'].append(
                     metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))
 
@@ -107,7 +107,7 @@ def baseline_CV(train_dat, test_dat, regularizer, regularize_type, eta, loss):
                     #Init the model parm
                     model.trained = False
 
-                    model.fit(X[train_index], y[train_index])
+                    model.fit(X[train_index], y[train_index], epoch = 5)
                     cv_score.append(
                         metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))
 
@@ -225,7 +225,7 @@ def main():
     
     regularizer = np.exp2(range(-6, 7, 1))
     delta = 0.05
-    eta = 0.001
+    eta = 0.01
     regularize_type = ['sq'] * regularizer.shape[0]
     loss = ['logit', 'square', 'hinge']
 

@@ -67,17 +67,20 @@ class base():
 
             w[ind] = w_sen
 
-
     def fit_dep(self, X1, y1):
         for i, row in enumerate(X1):
             self.fit_single(row, y1[i])
 
-    def fit(self, X1, y1, epoch = 1):
+    def fit(self, X1, y1, epoch = 1, decay_factor = None):
         for i in range(epoch):
             permute = np.random.permutation(len(X1))
             
             for j in permute:
                 self.fit_single_with_bias(X1[j], y1[j])
+
+            #Add step size decay every epoch
+            if decay_factor:
+                self.eta = self.eta / decay_factor
 
     def predict_dep(self, X):
         p = []

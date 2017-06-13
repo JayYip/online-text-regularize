@@ -25,7 +25,7 @@ def sen2doc(sen):
 def main():
 
     #Set loss and algorithm
-    l = 'logit'
+    l = 'square'
     algo = 1
 
     regularizer = np.exp2(range(-6, 7, 1))
@@ -53,7 +53,9 @@ def main():
     #Set epoch
     for i in range(100):
         print('Epoch %d' % i)
-        model.fit(X, y, epoch = 1)
+        model.fit(X, y, epoch = 1, decay_factor = 2)
+
+        print('Step Size: %f' % model.eta)
 
         print('Train Accuracy: %f' % metrics.accuracy_score(sen2doc(y), model.predict(X)))
 
