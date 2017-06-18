@@ -25,22 +25,22 @@ def sen2doc(sen):
 def main():
 
     #Set loss and algorithm
-    l = 'square'
+    l = 'logit'
     algo = 1
 
     regularizer = np.exp2(range(-6, 7, 1))
-    delta = 0.05
-    eta = 0.01
+    delta = 0.01
+    eta = 0.005
     regularize_type = ['sq'] * regularizer.shape[0]
     loss = ['logit', 'square', 'hinge']
 
-    data_path = 'data/'
+    data_path = 'data/movies.pkl'
 
     #Set up class
-    new_stream = Stream20News(data_path)
+    new_stream = StreamMovies(data_path)
     cat_name = ['comp.sys.mac.hardware', 'comp.sys.ibm.pc.hardware']
-    train_dat = new_stream.get_dat(cat_name, 'train')
-    test_dat = new_stream.get_dat(cat_name, 'test')
+    train_dat = new_stream.get_dat('train')
+    test_dat = new_stream.get_dat('test')
 
     model = OMSA(regularizer, delta, eta, regularize_type, loss = l, algo = algo)
 
@@ -48,12 +48,16 @@ def main():
     test_X, sen_test_y = test_dat
     test_y = sen2doc(sen_test_y)
 
+    X = X[:900]
+    y = y[:900]
+
     model.trained = False
 
     #Set epoch
     for i in range(100):
+        model = OMSA(regularizer, delta, eta, regularize_type, loss = l, algo = algo)
         print('Epoch %d' % i)
-        model.fit(X, y, epoch = 1, decay_factor = 2)
+        model.fit(X, y, epoch = 5, decay_factor = 2)
 
         print('Step Size: %f' % model.eta)
 
@@ -62,6 +66,7 @@ def main():
         print('Test Accuracy: %f' % metrics.accuracy_score(test_y, model.predict(test_X)))
 
         print('Probability: ', model.p)
+
 
 if __name__ == '__main__':
     main()

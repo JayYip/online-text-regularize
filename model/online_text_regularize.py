@@ -81,7 +81,7 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
         omega = self.omega[i]
 
         #Get the gradient
-        y_predict, y_doc, grad = self._get_gradient(X, y, w)
+        X_doc, y_doc, grad = self._get_gradient(X, y, w)
 
         w_half = w - ((self.eta / p) * grad)
 
@@ -92,6 +92,8 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
 
 
         self.w[:, i] = w
+
+        y_predict = int(np.sign(np.dot(X_doc, w)))
 
         loss = self._loss(y_doc, y_predict)
         norm = np.linalg.norm(self.w, 1)
@@ -123,6 +125,7 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
             self.omega = np.ones(self.regularizer_size)
             self.p = np.ones(self.regularizer_size) / self.regularizer_size
             self.q = np.ones(self.regularizer_size) / self.regularizer_size
+            self.trained_count = 1
 
         self.trained = True
         #Sampling i and j
@@ -138,9 +141,9 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
 
         #Get the gradient
         if self.algo == 2:
-            y_predict, y_doc, grad = self._get_gradient(X, y, w_bar)
+            X_doc, y_doc, grad = self._get_gradient(X, y, w_bar)
         else:
-            y_predict, y_doc, grad = self._get_gradient(X, y, w)
+            X_doc, y_doc, grad = self._get_gradient(X, y, w)
 
         w_half = w - ((self.eta / p) * grad)
 
@@ -157,11 +160,19 @@ class OMSA(base, BaseEstimator, ClassifierMixin):
         self.w[:, i] = w
 
         #Algo 2
-        if self.algo == 2:
+        if self.algo == 1:
+            y_predict = int(np.sign(np.dot(X_doc, w.T)))
+            norm = np.linalg.norm(self.w[:, i], 1)
+        elif self.algo == 2:
             self.w_bar[:, i] = (self.trained_count - 1) * w_bar / self.trained_count + w / self.trained_count
+            y_predict = int(np.sign(np.dot(X_doc, w.T)))
+            norm = np.linalg.norm(self.w[:, i], 1)
+        elif self.algo == 3:
+            self.w_bar[:, i] = (self.trained_count - 1) * w_bar / self.trained_count + w / self.trained_count
+            y_predict = int(np.sign(np.dot(X_doc, self.w_bar[:, i])))
+            norm = np.linalg.norm(self.w_bar[:, i], 1)
 
         loss = self._loss(y_doc, y_predict)
-        norm = np.linalg.norm(self.w, 1)
 
         omega = omega * np.exp(-self.eta * (loss + regularizer *  norm) / p)
 

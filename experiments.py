@@ -28,9 +28,7 @@ def OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
 
     for l in loss:
 
-        for algo in [1,2]:
-
-            model = OMSA(regularizer, delta, eta, regularize_type, loss = l, algo = algo)
+        for algo in [1,2,3]:
 
             kf = KFold(n_splits=5, shuffle=True)
 
@@ -43,11 +41,11 @@ def OMSA_CV(train_dat, test_dat, regularizer, delta, eta, regularize_type, loss)
             start = time.time()
             for train_index, test_index in kf.split(X):
 
-                #Init the model parm
-                model.trained = False
+                #Init the model
+                model = OMSA(regularizer, delta, eta, regularize_type, loss = l, algo = algo)
 
                 #Set epoch
-                model.fit(X[train_index], y[train_index], epoch = 5, decay_factor = 2)
+                model.fit(X[train_index], y[train_index], epoch = 3, decay_factor = 2)
                 score_dict['Algo %d ' % algo + l + ' CV_Score'].append(
                     metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))
 
@@ -107,7 +105,7 @@ def baseline_CV(train_dat, test_dat, regularizer, regularize_type, eta, loss):
                     #Init the model parm
                     model.trained = False
 
-                    model.fit(X[train_index], y[train_index], epoch = 5)
+                    model.fit(X[train_index], y[train_index], epoch = 1)
                     cv_score.append(
                         metrics.accuracy_score(sen2doc(y[test_index]), model.predict(X[test_index])))
 

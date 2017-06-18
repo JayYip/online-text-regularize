@@ -43,7 +43,7 @@ class base():
         elif self.loss == 'square':
             grad = (y_predict - y_doc) * X_doc
 
-        return (y_predict, y_doc, grad)
+        return (X_doc, y_doc, grad)
 
     def _word_reg_update(self, w_half, p, regularizer):
 

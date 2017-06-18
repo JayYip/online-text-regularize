@@ -63,7 +63,7 @@ class RegAdaGrad(base, BaseEstimator, ClassifierMixin):
         w = self.w
 
         #Get the gradient
-        y_predict, y_doc, grad = self._get_gradient(X, y, w)
+        X_doc, y_doc, grad = self._get_gradient(X, y, w)
 
         #Adjust gradient
         self.gti+=np.square(grad)
@@ -104,7 +104,7 @@ class RegAdaGrad(base, BaseEstimator, ClassifierMixin):
         w = self.w
 
         #Get the gradient
-        y_predict, y_doc, grad = self._get_gradient(X, y, w)
+        X_doc, y_doc, grad = self._get_gradient(X, y, w)
 
         #Adjust gradient
         self.gti+=np.square(grad)
@@ -205,7 +205,7 @@ class RegAdam(base, BaseEstimator, ClassifierMixin):
         w = self.w
 
         #Sum X to doc lvl
-        y_predict, y_doc, grad = self._get_gradient(X, y, w)
+        X_doc, y_doc, grad = self._get_gradient(X, y, w)
 
         #Adjust gradient
         self.M = self.beta1 * self.M + (1. - self.beta1) * grad.T
